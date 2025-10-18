@@ -35,13 +35,20 @@ jobs:
         with:
           arch: x64
 
+      # ✅ Tambahkan langkah ini
+      - name: Install OpenSSL
+        run: choco install openssl -y
+
       - name: Build Aseprite
         run: |
           mkdir build
           cd build
           cmake "${{ github.workspace }}/src/aseprite" -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLAF_BACKEND=skia -DSKIA_DIR="${{ github.workspace }}/src/skia" -DSKIA_LIBRARY_DIR="${{ github.workspace }}/src/skia/out/Release-x64" -DSKIA_LIBRARY="${{ github.workspace }}/src/skia/out/Release-x64/skia.lib"
           cmake --build . --config MinSizeRel --target aseprite
-          copy "C:/Windows/System32/libcrypto-1_1-x64.dll" ./bin
+
+          # 🔧 Ganti path copy ke lokasi OpenSSL yang benar
+          copy "C:\Program Files\OpenSSL-Win64\bin\libcrypto-1_1-x64.dll" .\bin
+          copy "C:\Program Files\OpenSSL-Win64\bin\libssl-1_1-x64.dll" .\bin
 
       - name: Get version
         id: get_version
