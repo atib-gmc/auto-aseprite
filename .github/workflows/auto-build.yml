@@ -1,4 +1,4 @@
-name: Auto build Aseprite
+name: Auto Build Aseprite Windows x64
 
 on:
   push:
@@ -9,38 +9,52 @@ permissions:
   contents: write
 
 jobs:
-  auto-build:
-    name: Auto build Aseprite for Windows x64
+  build-windows:
+    name: Build Aseprite for Windows
     runs-on: windows-2022
 
     steps:
-      - name: Checkout repository
+      # 1️⃣ Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3️⃣ Install Python dependencies
       - name: Install Python requirements
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download Aseprite
+      # 4️⃣ Download dependencies (Skia)
+      - name: Download Aseprite dependencies
         run: python download.py
 
+      # 5️⃣ Setup Ninja
       - name: Setup Ninja
         uses: ashutoshvarma/setup-ninja@v1.1
 
-      - name: Setup MSVC Developer Command Prompt
+      # 6️⃣ Setup MSVC
+      - name: Setup MSVC Dev Command Prompt
         uses: TheMrMilchmann/setup-msvc-dev@v3
         with:
           arch: x64
 
-      - name: Install OpenSSL via Chocolatey
+      # 7️⃣ Install OpenSSL via Chocolatey
+      - name: Install OpenSSL
         run: choco install openssl -y
 
+      # 8️⃣ Build Aseprite
       - name: Build Aseprite
         shell: pwsh
         run: |
           mkdir build
           cd build
+          
           cmake "${{ github.workspace }}/src/aseprite" `
             -G Ninja `
             -DCMAKE_BUILD_TYPE=MinSizeRel `
@@ -51,28 +65,29 @@ jobs:
 
           cmake --build . --config MinSizeRel --target aseprite
 
-          # Cari dan copy DLL OpenSSL secara dinamis
+          # 9️⃣ Copy OpenSSL DLLs dari Chocolatey
           $libcrypto = Get-ChildItem "C:\ProgramData\chocolatey\lib\openssl*" -Recurse -Filter "libcrypto*.dll" | Select-Object -First 1
           $libssl = Get-ChildItem "C:\ProgramData\chocolatey\lib\openssl*" -Recurse -Filter "libssl*.dll" | Select-Object -First 1
 
-          if ($libcrypto) { copy $libcrypto.FullName ".\bin" }
-          if ($libssl) { copy $libssl.FullName ".\bin" }
+          if ($libcrypto) { copy $libcrypto.FullName ".\bin" } else { Write-Host "libcrypto not found!" }
+          if ($libssl) { copy $libssl.FullName ".\bin" } else { Write-Host "libssl not found!" }
 
+      # 10️⃣ Get version
       - name: Get version
         id: get_version
         run: |
           $version = Get-Content version.txt
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
+      # 11️⃣ Zip Aseprite
       - name: Zip Aseprite
         run: |
           cd build/bin
           7z a ../../Aseprite-Windows-x64-${{ steps.get_version.outputs.version }}.zip *
 
-      - name: GH Release
-        uses: softprops/action-gh-release@v2
+      # 12️⃣ Upload artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
         with:
           name: Aseprite-Windows-x64-${{ steps.get_version.outputs.version }}
-          tag_name: ${{ steps.get_version.outputs.version }}
-          files: |
-            Aseprite-Windows-x64-${{ steps.get_version.outputs.version }}.zip
+          path: Aseprite-Windows-x64-${{ steps.get_version.outputs.version }}.zip
