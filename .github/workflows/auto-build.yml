@@ -3,7 +3,6 @@ name: Auto build Aseprite
 on:
   push:
     branches: main
-
   workflow_dispatch:
 
 permissions:
@@ -24,8 +23,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Download Aseprite
-        run: |
-          python download.py
+        run: python download.py
 
       - name: Setup Ninja
         uses: ashutoshvarma/setup-ninja@v1.1
@@ -35,20 +33,30 @@ jobs:
         with:
           arch: x64
 
-      # ✅ Tambahkan langkah ini
-      - name: Install OpenSSL
+      - name: Install OpenSSL via Chocolatey
         run: choco install openssl -y
 
       - name: Build Aseprite
+        shell: pwsh
         run: |
           mkdir build
           cd build
-          cmake "${{ github.workspace }}/src/aseprite" -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLAF_BACKEND=skia -DSKIA_DIR="${{ github.workspace }}/src/skia" -DSKIA_LIBRARY_DIR="${{ github.workspace }}/src/skia/out/Release-x64" -DSKIA_LIBRARY="${{ github.workspace }}/src/skia/out/Release-x64/skia.lib"
+          cmake "${{ github.workspace }}/src/aseprite" `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=MinSizeRel `
+            -DLAF_BACKEND=skia `
+            -DSKIA_DIR="${{ github.workspace }}/src/skia" `
+            -DSKIA_LIBRARY_DIR="${{ github.workspace }}/src/skia/out/Release-x64" `
+            -DSKIA_LIBRARY="${{ github.workspace }}/src/skia/out/Release-x64/skia.lib"
+
           cmake --build . --config MinSizeRel --target aseprite
 
-          # 🔧 Ganti path copy ke lokasi OpenSSL yang benar
-          copy "C:\Program Files\OpenSSL-Win64\bin\libcrypto-1_1-x64.dll" .\bin
-          copy "C:\Program Files\OpenSSL-Win64\bin\libssl-1_1-x64.dll" .\bin
+          # Cari dan copy DLL OpenSSL secara dinamis
+          $libcrypto = Get-ChildItem "C:\ProgramData\chocolatey\lib\openssl*" -Recurse -Filter "libcrypto*.dll" | Select-Object -First 1
+          $libssl = Get-ChildItem "C:\ProgramData\chocolatey\lib\openssl*" -Recurse -Filter "libssl*.dll" | Select-Object -First 1
+
+          if ($libcrypto) { copy $libcrypto.FullName ".\bin" }
+          if ($libssl) { copy $libssl.FullName ".\bin" }
 
       - name: Get version
         id: get_version
