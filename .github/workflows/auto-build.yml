@@ -65,7 +65,7 @@ jobs:
 
           cmake --build . --config MinSizeRel --target aseprite
 
-          # 9️⃣ Copy OpenSSL DLLs dari Chocolatey
+          # 9️⃣ Copy OpenSSL DLLs
           $libcrypto = Get-ChildItem "C:\ProgramData\chocolatey\lib\openssl*" -Recurse -Filter "libcrypto*.dll" | Select-Object -First 1
           $libssl = Get-ChildItem "C:\ProgramData\chocolatey\lib\openssl*" -Recurse -Filter "libssl*.dll" | Select-Object -First 1
 
@@ -87,7 +87,7 @@ jobs:
 
       # 12️⃣ Upload artifact
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Aseprite-Windows-x64-${{ steps.get_version.outputs.version }}
           path: Aseprite-Windows-x64-${{ steps.get_version.outputs.version }}.zip
